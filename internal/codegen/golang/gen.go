@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/format"
+	"io/ioutil"
 	"strings"
 	"text/template"
 
@@ -394,7 +395,22 @@ func generate(settings config.CombinedSettings, enums []Enum, structs []Struct, 
 		"imports":    i.Imports,
 	}
 
-	tmpl := template.Must(template.New("table").Funcs(funcMap).Parse(templateSet))
+	var tplTxt string
+
+	if settings.Go.Template != "" {
+		b, err := ioutil.ReadFile(settings.Go.Template)
+		if err != nil {
+			return nil, err
+		}
+
+		tplTxt = string(b)
+	}
+
+	if tplTxt == "" {
+		tplTxt = templateSet
+	}
+
+	tmpl := template.Must(template.New("table").Funcs(funcMap).Parse(tplTxt))
 
 	golang := settings.Go
 	tctx := tmplCtx{

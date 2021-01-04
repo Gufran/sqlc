@@ -119,6 +119,7 @@ type SQLGo struct {
 	Out                 string            `json:"out" yaml:"out"`
 	Overrides           []Override        `json:"overrides,omitempty" yaml:"overrides"`
 	Rename              map[string]string `json:"rename,omitempty" yaml:"rename"`
+	Template            string            `json:"template" yaml:"template"`
 }
 
 type SQLKotlin struct {
