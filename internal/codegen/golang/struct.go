@@ -7,11 +7,17 @@ import (
 	"github.com/kyleconroy/sqlc/internal/core"
 )
 
+type StructQueryParams struct {
+	QueryName string
+	Params    QueryValue
+}
+
 type Struct struct {
-	Table   core.FQN
-	Name    string
-	Fields  []Field
-	Comment string
+	Table       core.FQN
+	Name        string
+	Fields      []Field
+	Comment     string
+	QueryParams []StructQueryParams
 }
 
 func StructName(name string, settings config.CombinedSettings) string {

@@ -149,13 +149,7 @@ func buildQueries(r *compiler.Result, settings config.CombinedSettings, structs 
 			Comments:     query.Comments,
 		}
 
-		if len(query.Params) == 1 {
-			p := query.Params[0]
-			gq.Arg = QueryValue{
-				Name: paramName(p),
-				Typ:  goType(r, p.Column, settings),
-			}
-		} else if len(query.Params) > 1 {
+		if len(query.Params) > 0 {
 			var cols []goColumn
 			for _, p := range query.Params {
 				cols = append(cols, goColumn{
@@ -170,13 +164,7 @@ func buildQueries(r *compiler.Result, settings config.CombinedSettings, structs 
 			}
 		}
 
-		if len(query.Columns) == 1 {
-			c := query.Columns[0]
-			gq.Ret = QueryValue{
-				Name: columnName(c, 0),
-				Typ:  goType(r, c, settings),
-			}
-		} else if len(query.Columns) > 1 {
+		if len(query.Columns) > 0 {
 			var gs *Struct
 			var emit bool
 

@@ -377,7 +377,76 @@ func Generate(r *compiler.Result, settings config.CombinedSettings) (map[string]
 	enums := buildEnums(r, settings)
 	structs := buildStructs(r, settings)
 	queries := buildQueries(r, settings, structs)
+	structs = groupStructQueries(r, structs, queries, settings)
 	return generate(settings, enums, structs, queries)
+}
+
+func groupStructQueries(r *compiler.Result, structs []Struct, queries []Query, settings config.CombinedSettings) []Struct {
+	var result []Struct
+
+	for _, s := range structs {
+		for _, query := range r.Queries {
+			if len(s.Fields) != len(query.Columns) {
+				continue
+			}
+
+			if !sameFields(r, s, query, settings) {
+				continue
+			}
+
+			for _, tq := range queries {
+				if tq.SQL != query.SQL {
+					continue
+				}
+
+				if !allFieldsInStruct(tq, s) {
+					continue
+				}
+
+				s.QueryParams = append(s.QueryParams, StructQueryParams{
+					QueryName: tq.MethodName,
+					Params:    tq.Arg,
+				})
+			}
+		}
+
+		result = append(result, s)
+	}
+
+	return result
+}
+
+func allFieldsInStruct(tq Query, s Struct) bool {
+	if tq.Arg.Struct == nil {
+		return true
+	}
+
+	structFields := map[string]struct{}{}
+	for _, f := range s.Fields {
+		structFields[f.Name] = struct{}{}
+	}
+
+	for _, af := range tq.Arg.Struct.Fields {
+		if _, ok := structFields[af.Name]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+func sameFields(r *compiler.Result, s Struct, query *compiler.Query, settings config.CombinedSettings) bool {
+	for i, f := range s.Fields {
+		c := query.Columns[i]
+		sameName := f.Name == StructName(columnName(c, i), settings)
+		sameType := f.Type == goType(r, c, settings)
+		sameTable := sameTableName(c.Table, s.Table, r.Catalog.DefaultSchema)
+		if !sameName || !sameType || !sameTable {
+			return false
+		}
+	}
+
+	return true
 }
 
 func generate(settings config.CombinedSettings, enums []Enum, structs []Struct, queries []Query) (map[string]string, error) {
@@ -450,16 +519,8 @@ func generate(settings config.CombinedSettings, enums []Enum, structs []Struct, 
 		return nil
 	}
 
-	if err := execute("db.go", "dbFile"); err != nil {
-		return nil, err
-	}
 	if err := execute("models.go", "modelsFile"); err != nil {
 		return nil, err
-	}
-	if golang.EmitInterface {
-		if err := execute("querier.go", "interfaceFile"); err != nil {
-			return nil, err
-		}
 	}
 
 	files := map[string]struct{}{}
